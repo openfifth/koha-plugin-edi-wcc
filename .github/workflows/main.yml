@@ -20,9 +20,10 @@ jobs:
       - name: Check out Koha
         run: |
           cd ..
-          # Temporary override: use OpenFifth's 24.11.wcc branch which includes required fixes
-          # git clone --branch ${{ steps.koha-version.outputs.current-branch-name }} --single-branch --depth 1 https://github.com/Koha-Community/Koha.git kohaclone
-          git clone --branch 24.11.wcc --single-branch --depth 1 https://github.com/openfifth/koha.git kohaclone
+          # Plugin requires the after_edi_cron hook, currently a LOCAL commit on
+          # openfifth/25.11.o5th. Switch to Koha-Community/main once the hook
+          # has been upstreamed.
+          git clone --branch 25.11.o5th --single-branch --depth 1 https://github.com/openfifth/koha.git kohaclone
 
       - name: Export additional variables needed by koha-testing-docker
         run: |
@@ -41,7 +42,7 @@ jobs:
           echo "KOHA_INTRANET_URL=$KOHA_INTRANET_URL" >> $GITHUB_ENV
           echo "KOHA_MARC_FLAVOUR=$KOHA_MARC_FLAVOUR" >> $GITHUB_ENV
           echo "RUN_TESTS_AND_EXIT=no" >> $GITHUB_ENV
-          echo "KOHA_IMAGE=24.11" >> $GITHUB_ENV
+          echo "KOHA_IMAGE=25.11" >> $GITHUB_ENV
 
       - name: Set up koha-testing-docker
         run: |
