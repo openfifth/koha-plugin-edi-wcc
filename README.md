@@ -32,50 +32,47 @@ adjustments.
 
 ## Running
 
-There are three ways to run the processor; pick whichever fits the
-deployment:
+The plugin runs automatically via the `after_edi_cron` hook fired from
+`misc/cronjobs/edi_cron.pl`. No separate cron entry is needed — once the
+plugin is installed and configured (dry-run unchecked when ready), every
+run of `edi_cron.pl` triggers service-charge processing on the same set
+of invoice messages it just imported.
 
-### A. From the existing EDI cron sequence (current state)
+The `after_edi_cron` hook ships in the OpenFifth `25.11.o5th` branch as
+a LOCAL commit. It is also a candidate for upstreaming so the plugin can
+work on stock community Koha — see *Upstream work* below.
 
-The plugin ships the original `edi_process_service_charges.pl` under
-`scripts/`. Add it to crontab immediately after `edi_cron.pl`:
+### Manual / one-off runs
 
-```cron
-*/15 * * * *  /usr/share/koha/bin/cronjobs/edi_cron.pl >> /var/log/koha/edi.log 2>&1
-*/15 * * * *  sleep 60 && /var/lib/koha/<instance>/plugins/koha-plugin-edi-wcc/scripts/edi_process_service_charges.pl --confirm >> /var/log/koha/edi.log 2>&1
+The bundled `scripts/edi_process_service_charges.pl` can still be run by
+hand for backfills or debugging:
+
+```sh
+/var/lib/koha/<instance>/plugins/koha-plugin-edi-wcc/scripts/edi_process_service_charges.pl --dry-run --verbose
 ```
 
-### B. Via `plugins_nightly.pl`
-
-The plugin implements `cronjob_nightly`, so a nightly run will happen
-automatically wherever `misc/cronjobs/plugins_nightly.pl` is scheduled.
-Use the *Configure* page to set dry-run/verbose defaults. This does *not*
-run with `--confirm` unless dry-run is unchecked in configuration.
-
-### C. Via a proposed `after_edi_cron` core hook (planned)
-
-The plugin already implements an `after_edi_cron` method. Once Koha
-core's `misc/cronjobs/edi_cron.pl` invokes
-`Koha::Plugins->new->call('after_edi_cron', \%args)` at the end of its
-processing loop, the plugin will fire automatically with no separate cron
-entry needed. The core change is small (a single `call`) and is the
-right long-term integration point. See *Upstream work* below.
+**Do not put this script in crontab alongside `edi_cron.pl`.** The
+processor is not idempotent — running it twice on the same invoice
+double-counts the service charge adjustment. The `after_edi_cron` hook is
+the only automatic integration point.
 
 ## Upstream work
 
 The processing logic itself is WCC-business-specific (vendor-to-budget
 mapping, split-order handling, particular tax/allowance behaviour) and
-should remain a plugin until those abstractions are generalised. However,
-to make the plugin model viable, Koha core needs an integration point.
-Items to upstream:
+should remain a plugin until those abstractions are generalised. The
+plugin's *core integration point* is genuinely general:
 
-1. **`after_edi_cron` plugin hook** — add a single
-   `Koha::Plugins->new->call('after_edi_cron', { invoices => \@processed_invoicenumbers })`
-   to the end of `misc/cronjobs/edi_cron.pl`. Documented use case: this
-   plugin.
-2. **Optional: `after_edi_invoice_processed` per-invoice hook** — fired
-   from `Koha::EDI::process_invoice` once an invoice has been created.
-   Better granularity but larger surface; secondary.
+- **`after_edi_cron` plugin hook** — adds a single
+  `Koha::Plugins->call('after_edi_cron', { action => 'edi_cron_completed', payload => { quote_ids, invoice_ids, response_ids } })`
+  call at the end of `misc/cronjobs/edi_cron.pl`. Already on
+  `openfifth/25.11.o5th`; should be filed as a community Bugzilla once
+  this plugin has been validated in production. Generally useful for
+  any post-EDI workflow (SAP exports, finance reconciliation, alerting).
+- **Optional: `after_edi_invoice_processed` per-invoice hook** — fired
+  from `Koha::EDI::process_invoice` once an invoice has been created.
+  Better granularity but larger surface; secondary, and only worth
+  pursuing if a use case other than this plugin emerges.
 
 ## Maintenance
 

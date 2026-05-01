@@ -65,28 +65,20 @@ sub configure {
     $self->output_html( $template->output );
 }
 
-=head2 cronjob_nightly
-
-Plugin hook invoked by C<plugins_nightly.pl>. Runs the bundled
-C<edi_process_service_charges.pl> script. This is a temporary integration
-point until a dedicated C<after_edi_cron> core hook is added.
-
-Configuration values C<dry_run> and C<verbose> stored via C<configure> are
-honoured. C<dry_run> defaults to 1 (safe).
-
-=cut
-
-sub cronjob_nightly {
-    my ($self) = @_;
-    return $self->_run_service_charge_processor;
-}
-
 =head2 after_edi_cron
 
-Proposed Koha core hook. Once C<misc/cronjobs/edi_cron.pl> calls
-C<< Koha::Plugins->new->call('after_edi_cron', \%args) >> at the end of its
-processing loop, this method will fire automatically and replace
-C<cronjob_nightly> as the primary integration point.
+Fires from C<misc/cronjobs/edi_cron.pl> via C<< Koha::Plugins->call >>
+once all downloaded EDIFACT messages (quotes, invoices, order responses)
+have been processed. Receives the EdifactMessage ids touched in the
+current run as C<< $args->{payload}{invoice_ids} >> etc.
+
+This is the only automatic integration point. C<cronjob_nightly> was
+deliberately removed — the service charge processor is not idempotent
+(re-running would double the adjustments) and tying it to two cron paths
+risks exactly that.
+
+Configuration values C<dry_run> and C<verbose> stored via C<configure>
+are honoured. C<dry_run> defaults to 1 (safe).
 
 =cut
 
