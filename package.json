@@ -1,0 +1,36 @@
+{
+  "name": "koha-plugin-edi-wcc",
+  "version": "0.1.0",
+  "previous_version": "0.0.0",
+  "description": "WCC EDI service charges processor — extracts MOA+8 service charges (ALC+C) from EDIFACT INVOIC messages and creates matching invoice adjustments",
+  "plugin": {
+    "module": "Koha::Plugin::Com::OpenFifth::EdiWcc",
+    "pm_path": "Koha/Plugin/Com/OpenFifth/EdiWcc.pm"
+  },
+  "scripts": {
+    "version:patch": "node increment_version.js patch | cat",
+    "version:minor": "node increment_version.js minor | cat",
+    "version:major": "node increment_version.js major | cat",
+    "release:patch": "node increment_version.js patch | cat && git add . && git commit -m 'chore: bump version' && VERSION=$(node -p 'require(\"./package.json\").version') && git tag -a v$VERSION -m \"Release v$VERSION\" && git push origin main --follow-tags",
+    "release:minor": "node increment_version.js minor | cat && git add . && git commit -m 'chore: bump version' && VERSION=$(node -p 'require(\"./package.json\").version') && git tag -a v$VERSION -m \"Release v$VERSION\" && git push origin main --follow-tags",
+    "release:major": "node increment_version.js major | cat && git add . && git commit -m 'chore: bump version' && VERSION=$(node -p 'require(\"./package.json\").version') && git tag -a v$VERSION -m \"Release v$VERSION\" && git push origin main --follow-tags"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/openfifth/koha-plugin-edi-wcc.git"
+  },
+  "author": "Open Fifth",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/openfifth/koha-plugin-edi-wcc/issues"
+  },
+  "homepage": "https://github.com/openfifth/koha-plugin-edi-wcc#readme",
+  "keywords": [
+    "koha",
+    "plugin",
+    "edi",
+    "edifact",
+    "acquisitions",
+    "invoice"
+  ]
+}
