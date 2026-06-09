@@ -86,7 +86,7 @@ sub configure {
         budget_list => \@budget_list,
         mappings    => $mappings,
         csrf_token  => Koha::Token->new->generate_csrf(
-            { session => scalar $self->{cgi}->cookie('CGISESSID') }
+            { session_id => scalar $self->{cgi}->cookie('CGISESSID') }
         ),
     );
     $self->output_html( $template->output );
