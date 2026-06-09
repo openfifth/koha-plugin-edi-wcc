@@ -74,7 +74,10 @@ sub configure {
     my $schema = Koha::Database->new->schema;
     my @budget_list = map {
         { id => $_->budget_id, name => $_->budget_name, code => $_->budget_code // '' }
-    } $schema->resultset('Aqbudget')->search( {}, { order_by => 'budget_name' } )->all;
+    } $schema->resultset('Aqbudget')->search(
+        { 'budget_period.budget_period_active' => 1 },
+        { join => 'budget_period', order_by => 'me.budget_name' }
+    )->all;
 
     my $map_json = $self->retrieve_data('vendor_budget_map') // '[]';
     my $mappings = eval { decode_json($map_json) } // [];
