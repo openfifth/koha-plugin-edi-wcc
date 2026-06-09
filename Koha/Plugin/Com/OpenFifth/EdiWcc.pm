@@ -9,9 +9,6 @@ use Koha::Database;
 use Koha::Logger;
 use JSON qw( decode_json encode_json );
 
-use File::Spec;
-use Cwd qw( abs_path );
-
 our $VERSION = '0.1.1';
 
 our $metadata = {
@@ -120,35 +117,33 @@ sub _run_service_charge_processor {
         { category => 'Koha.Plugin.Com.OpenFifth.EdiWcc' }
     );
 
-    my $dry_run = $self->retrieve_data('dry_run') // 1;
-    my $verbose = $self->retrieve_data('verbose') // 0;
+    my $dry_run    = $self->retrieve_data('dry_run') // 1;
+    my $verbose    = $self->retrieve_data('verbose') // 0;
+    my $map_json   = $self->retrieve_data('vendor_budget_map') // '[]';
+    my $budget_map = eval { decode_json($map_json) } // [];
 
-    my $script = $self->_script_path('edi_process_service_charges.pl');
-    unless ( -e $script ) {
-        $logger->error("EdiWcc: bundled script not found at $script");
-        return;
+    require Koha::Plugin::Com::OpenFifth::EdiWcc::Processor;
+
+    my $processor = Koha::Plugin::Com::OpenFifth::EdiWcc::Processor->new(
+        dry_run    => $dry_run,
+        budget_map => $budget_map,
+    );
+
+    my $result = $processor->run;
+
+    for my $msg ( @{ $result->{messages} } ) {
+        next if $msg->{verbose} && !$verbose;
+        $logger->info( 'EdiWcc: ' . $msg->{text} );
     }
 
-    my $budget_map = $self->retrieve_data('vendor_budget_map') // '[]';
+    $logger->info( sprintf(
+        'EdiWcc: processed %d messages, created %d adjustments%s',
+        $result->{processed},
+        $result->{adjustments},
+        $dry_run ? ' (dry run)' : ''
+    ));
 
-    my @cmd = ( $^X, $script );
-    push @cmd, $dry_run ? '--dry-run' : '--confirm';
-    push @cmd, '--verbose' if $verbose;
-    push @cmd, '--budget-map', $budget_map;
-
-    $logger->info( 'EdiWcc: running ' . join ' ', @cmd );
-    my $rc = system(@cmd);
-    if ($rc != 0) {
-        $logger->error("EdiWcc: service charge processor exited with status $rc");
-    }
-    return $rc == 0;
-}
-
-sub _script_path {
-    my ( $self, $name ) = @_;
-    my $module = __FILE__;
-    my $dir    = ( File::Spec->splitpath($module) )[1];
-    return abs_path( File::Spec->catfile( $dir, '..', '..', '..', '..', '..', 'scripts', $name ) );
+    return 1;
 }
 
 1;
