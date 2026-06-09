@@ -12,13 +12,13 @@ use JSON qw( decode_json encode_json );
 use File::Spec;
 use Cwd qw( abs_path );
 
-our $VERSION = '0.1.0';
+our $VERSION = '0.1.1';
 
 our $metadata = {
     name            => 'EDI Service Charges (WCC)',
     author          => 'Open Fifth',
     date_authored   => '2026-05-01',
-    date_updated    => '2026-05-01',
+    date_updated    => '2026-06-09',
     minimum_version => '24.11.00.000',
     maximum_version => undef,
     version         => $VERSION,
