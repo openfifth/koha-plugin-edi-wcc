@@ -10,7 +10,7 @@ use Koha::Logger;
 use Koha::Token;
 use JSON qw( decode_json encode_json );
 
-our $VERSION = '0.1.2';
+our $VERSION = '0.1.3';
 
 our $metadata = {
     name            => 'EDI Service Charges (WCC)',
