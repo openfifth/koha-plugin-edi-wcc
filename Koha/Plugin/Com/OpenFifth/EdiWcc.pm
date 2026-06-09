@@ -7,6 +7,7 @@ use base qw{ Koha::Plugins::Base };
 use C4::Context;
 use Koha::Database;
 use Koha::Logger;
+use Koha::Token;
 use JSON qw( decode_json encode_json );
 
 our $VERSION = '0.1.2';
@@ -84,6 +85,9 @@ sub configure {
         verbose     => $self->retrieve_data('verbose') // 0,
         budget_list => \@budget_list,
         mappings    => $mappings,
+        csrf_token  => Koha::Token->new->generate_csrf(
+            { session => scalar $self->{cgi}->cookie('CGISESSID') }
+        ),
     );
     $self->output_html( $template->output );
 }

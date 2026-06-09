@@ -24,6 +24,7 @@
                     <input type="hidden" name="class" value="[% CLASS %]" />
                     <input type="hidden" name="method" value="[% METHOD %]" />
                     <input type="hidden" name="save" value="1" />
+                    <input type="hidden" name="csrf_token" value="[% csrf_token %]" />
 
                     <fieldset class="rows">
                         <legend>Run options</legend>
