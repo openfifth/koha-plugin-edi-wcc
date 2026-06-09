@@ -40,6 +40,51 @@
                         </ol>
                     </fieldset>
 
+                    <fieldset class="rows">
+                        <legend>Vendor-to-budget mappings</legend>
+                        <p class="hint">
+                            Map vendor name prefixes to acquisition funds. Service charge adjustments
+                            will be posted to the matched fund. Entries are tested in order; the first
+                            prefix that matches the start of the vendor name wins. Matching is
+                            case-insensitive and the prefix must align to a word boundary.
+                        </p>
+                        <table id="budget-map-table" class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Vendor name prefix</th>
+                                    <th>Fund</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="budget-map-rows">
+                                [% FOR mapping IN mappings %]
+                                <tr class="budget-map-row">
+                                    <td>
+                                        <input type="text" name="vendor_prefix"
+                                               value="[% mapping.vendor_prefix | html %]"
+                                               class="form-control" placeholder="e.g. WCC" />
+                                    </td>
+                                    <td>
+                                        <select name="budget_id" class="form-select">
+                                            <option value="">-- select fund --</option>
+                                            [% FOR budget IN budget_list %]
+                                            <option value="[% budget.id %]"
+                                                [% IF mapping.budget_id == budget.id %]selected="selected"[% END %]>
+                                                [% budget.name | html %] ([% budget.code | html %])
+                                            </option>
+                                            [% END %]
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-danger btn-xs remove-row">Remove</button>
+                                    </td>
+                                </tr>
+                                [% END %]
+                            </tbody>
+                        </table>
+                        <button type="button" id="add-mapping-row" class="btn btn-default btn-sm">+ Add mapping</button>
+                    </fieldset>
+
                     <fieldset class="action">
                         <input type="submit" value="Save configuration" />
                         <a href="/cgi-bin/koha/plugins/plugins-home.pl" class="cancel">Cancel</a>
@@ -49,5 +94,39 @@
         </div>
     </div>
 </div>
+
+<template id="budget-map-row-template">
+    <tr class="budget-map-row">
+        <td>
+            <input type="text" name="vendor_prefix" value=""
+                   class="form-control" placeholder="e.g. WCC" />
+        </td>
+        <td>
+            <select name="budget_id" class="form-select">
+                <option value="">-- select fund --</option>
+                [% FOR budget IN budget_list %]
+                <option value="[% budget.id %]">[% budget.name | html %] ([% budget.code | html %])</option>
+                [% END %]
+            </select>
+        </td>
+        <td>
+            <button type="button" class="btn btn-danger btn-xs remove-row">Remove</button>
+        </td>
+    </tr>
+</template>
+
+<script>
+$(document).ready(function () {
+    $('#budget-map-rows').on('click', '.remove-row', function () {
+        $(this).closest('tr').remove();
+    });
+
+    $('#add-mapping-row').on('click', function () {
+        var tpl = document.getElementById('budget-map-row-template');
+        var clone = document.importNode(tpl.content, true);
+        document.getElementById('budget-map-rows').appendChild(clone);
+    });
+});
+</script>
 
 [% INCLUDE 'intranet-bottom.inc' %]

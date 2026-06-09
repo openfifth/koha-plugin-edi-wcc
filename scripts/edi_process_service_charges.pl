@@ -74,17 +74,20 @@ Print this help message.
 
 use Getopt::Long;
 use Pod::Usage;
+use JSON qw( decode_json );
 
-my $help    = 0;
-my $dry_run = 1;    # Default to dry-run mode
-my $confirm = 0;
-my $verbose = 0;
+my $help            = 0;
+my $dry_run         = 1;    # Default to dry-run mode
+my $confirm         = 0;
+my $verbose         = 0;
+my $budget_map_json = '[]';
 
 GetOptions(
     'help|?'          => \$help,
     'dry-run'         => \$dry_run,
     'confirm|execute' => \$confirm,
     'verbose'         => \$verbose,
+    'budget-map=s'    => \$budget_map_json,
 ) or pod2usage(2);
 
 # If --confirm is specified, disable dry-run mode
@@ -96,8 +99,9 @@ pod2usage(1) if $help;
 
 die "Syspref 'EDIFACT' is disabled" unless C4::Context->preference('EDIFACT');
 
-my $schema = Koha::Database->new()->schema();
-my $logger = Koha::Logger->get( { interface => 'edi', prefix => 0 } );
+my $schema     = Koha::Database->new()->schema();
+my $logger     = Koha::Logger->get( { interface => 'edi', prefix => 0 } );
+my $budget_map = eval { decode_json($budget_map_json) } // [];
 
 if ($dry_run) {
     print "Processing EDI service charges (DRY RUN - use --confirm to make actual changes)\n" if $verbose;
@@ -622,14 +626,12 @@ sub map_vendor_to_budget_id {
 
     return '' unless $vendor_name;
 
-    # Map vendor names to budget IDs
-    if ( $vendor_name =~ /^WCC\b/i ) {
-        return '104';    #'WCHG';
-    } elsif ( $vendor_name =~ /^RBKC\b/i ) {
-        return '76';     #KCHG';
+    for my $entry ( @{$budget_map} ) {
+        my $prefix = $entry->{vendor_prefix} // '';
+        next unless length($prefix);
+        return $entry->{budget_id} if $vendor_name =~ /^\Q$prefix\E\b/i;
     }
 
-    # Default fallback - could be made configurable
     return '';
 }
 

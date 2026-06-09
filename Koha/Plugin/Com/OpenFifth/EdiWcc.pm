@@ -5,7 +5,9 @@ use Modern::Perl;
 use base qw{ Koha::Plugins::Base };
 
 use C4::Context;
+use Koha::Database;
 use Koha::Logger;
+use JSON qw( decode_json encode_json );
 
 use File::Spec;
 use Cwd qw( abs_path );
@@ -47,20 +49,44 @@ sub configure {
     my $cgi = $self->{cgi};
 
     if ( $cgi->param('save') ) {
+        my @vendor_prefixes = $cgi->multi_param('vendor_prefix');
+        my @budget_ids      = $cgi->multi_param('budget_id');
+
+        my @mappings;
+        for my $i ( 0 .. $#vendor_prefixes ) {
+            my $prefix    = $vendor_prefixes[$i] // '';
+            my $budget_id = $budget_ids[$i]      // '';
+            $prefix    =~ s/^\s+|\s+$//g;
+            $budget_id =~ s/^\s+|\s+$//g;
+            next unless length($prefix) && $budget_id =~ /^\d+$/;
+            push @mappings, { vendor_prefix => $prefix, budget_id => $budget_id + 0 };
+        }
+
         $self->store_data(
             {
-                dry_run => $cgi->param('dry_run') ? 1 : 0,
-                verbose => $cgi->param('verbose') ? 1 : 0,
+                dry_run           => $cgi->param('dry_run') ? 1 : 0,
+                verbose           => $cgi->param('verbose') ? 1 : 0,
+                vendor_budget_map => encode_json( \@mappings ),
             }
         );
         $self->go_home;
         return;
     }
 
+    my $schema = Koha::Database->new->schema;
+    my @budget_list = map {
+        { id => $_->budget_id, name => $_->budget_name, code => $_->budget_code // '' }
+    } $schema->resultset('Aqbudget')->search( {}, { order_by => 'budget_name' } )->all;
+
+    my $map_json = $self->retrieve_data('vendor_budget_map') // '[]';
+    my $mappings = eval { decode_json($map_json) } // [];
+
     my $template = $self->get_template( { file => 'configure.tt' } );
     $template->param(
-        dry_run => $self->retrieve_data('dry_run') // 1,
-        verbose => $self->retrieve_data('verbose') // 0,
+        dry_run     => $self->retrieve_data('dry_run') // 1,
+        verbose     => $self->retrieve_data('verbose') // 0,
+        budget_list => \@budget_list,
+        mappings    => $mappings,
     );
     $self->output_html( $template->output );
 }
@@ -103,9 +129,12 @@ sub _run_service_charge_processor {
         return;
     }
 
+    my $budget_map = $self->retrieve_data('vendor_budget_map') // '[]';
+
     my @cmd = ( $^X, $script );
     push @cmd, $dry_run ? '--dry-run' : '--confirm';
     push @cmd, '--verbose' if $verbose;
+    push @cmd, '--budget-map', $budget_map;
 
     $logger->info( 'EdiWcc: running ' . join ' ', @cmd );
     my $rc = system(@cmd);
