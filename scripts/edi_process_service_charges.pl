@@ -112,13 +112,13 @@ my $budget_map = eval { decode_json($budget_map_json) } // [];
 my $processor = Koha::Plugin::Com::OpenFifth::EdiWcc::Processor->new(
     dry_run    => $dry_run,
     budget_map => $budget_map,
+    on_message => sub {
+        my ( $text, $is_verbose ) = @_;
+        print "$text\n" unless $is_verbose && !$verbose;
+    },
 );
 
-my $result = $processor->run;
-
-for my $msg ( @{ $result->{messages} } ) {
-    print $msg->{text} . "\n" if $verbose || !$msg->{verbose};
-}
+$processor->run;
 
 =head1 SETUP INSTRUCTIONS
 

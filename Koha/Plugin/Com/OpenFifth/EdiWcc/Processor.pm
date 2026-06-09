@@ -50,15 +50,22 @@ Since MOA+128/203 totals are inclusive of service charges, this module also
 reduces orderline unit prices to avoid double-counting when service charges
 are extracted as separate adjustments.
 
-Messages are returned in the result hashref rather than printed directly,
-allowing callers to handle output as appropriate (CLI printing, logging,
-action log storage, etc.).  Each message has the form:
+Output is delivered via an C<on_message> callback passed at construction
+rather than collected and returned.  This gives callers live feedback as
+processing happens rather than a batched dump at the end.
 
-    { text => '...', verbose => 0|1 }
+The callback receives C<($text, $is_verbose)> where C<$is_verbose> is 1 for
+detail-level messages (show only in verbose/debug mode) and 0 for
+summary-level messages that should always be shown.
 
-Non-verbose messages (verbose => 0) are summary-level and should always be
-shown.  Verbose messages (verbose => 1) are detail-level and should only be
-shown when the caller is in a verbose/debug mode.
+    on_message => sub {
+        my ($text, $is_verbose) = @_;
+        print "$text\n" unless $is_verbose && !$my_verbose_flag;
+    }
+
+If no C<on_message> is provided the messages are silently discarded; the
+structured C<Koha::Logger> entries (written at action-time regardless) still
+capture everything.
 
 =cut
 
@@ -67,9 +74,9 @@ sub new {
     return bless {
         dry_run    => $args{dry_run}    // 1,
         budget_map => $args{budget_map} // [],
+        on_message => $args{on_message} // sub {},
         _schema    => Koha::Database->new->schema,
         _logger    => Koha::Logger->get( { interface => 'edi', prefix => 0 } ),
-        _messages  => [],
     }, $class;
 }
 
@@ -93,7 +100,7 @@ sub run {
 
     unless ( C4::Context->preference('EDIFACT') ) {
         $self->{_logger}->warn('EDI Service Charges: EDIFACT syspref is disabled, skipping');
-        return { processed => 0, adjustments => 0, messages => [] };
+        return { processed => 0, adjustments => 0 };
     }
 
     $self->_msg(
@@ -140,7 +147,6 @@ sub run {
     return {
         processed   => $processed_count,
         adjustments => $adjustment_count,
-        messages    => $self->{_messages},
     };
 }
 
@@ -150,7 +156,7 @@ sub run {
 
 sub _msg {
     my ( $self, $text, $verbose ) = @_;
-    push @{ $self->{_messages} }, { text => $text, verbose => $verbose ? 1 : 0 };
+    $self->{on_message}->( $text, $verbose ? 1 : 0 );
 }
 
 sub _process_invoice_message {

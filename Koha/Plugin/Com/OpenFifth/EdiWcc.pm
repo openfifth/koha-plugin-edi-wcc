@@ -127,14 +127,14 @@ sub _run_service_charge_processor {
     my $processor = Koha::Plugin::Com::OpenFifth::EdiWcc::Processor->new(
         dry_run    => $dry_run,
         budget_map => $budget_map,
+        on_message => sub {
+            my ( $text, $is_verbose ) = @_;
+            return if $is_verbose && !$verbose;
+            $logger->info("EdiWcc: $text");
+        },
     );
 
     my $result = $processor->run;
-
-    for my $msg ( @{ $result->{messages} } ) {
-        next if $msg->{verbose} && !$verbose;
-        $logger->info( 'EdiWcc: ' . $msg->{text} );
-    }
 
     $logger->info( sprintf(
         'EdiWcc: processed %d messages, created %d adjustments%s',
