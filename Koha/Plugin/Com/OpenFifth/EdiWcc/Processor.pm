@@ -204,9 +204,56 @@ sub _process_invoice_message {
             my $allowances_charges = $self->_get_line_allowances_charges($line);
             next unless @$allowances_charges;
 
+            my $edi_ordernumber    = $line->ordernumber();
+            my $received_order     = $self->_find_received_order_for_invoice(
+                $edi_ordernumber, $koha_invoice, $orders_processed
+            );
+            my $actual_ordernumber = $received_order ? $received_order->ordernumber : undef;
+
+            # Accumulate total charges per line for a single orderline price adjustment,
+            # avoiding the double-subtract bug when multiple MOA+8 charges exist on one line.
+            my $total_charge_excl = 0;
+            my $total_charge_tax  = 0;
+            my $has_charges       = 0;
+
             foreach my $alc_data (@$allowances_charges) {
-                $adjustments_created += $self->_handle_line_level_alc(
-                    $invoice_message, $koha_invoice, $line, $alc_data, $orders_processed
+                my ( $created, $charge_excl, $charge_tax ) = $self->_handle_line_level_alc(
+                    $invoice_message, $koha_invoice, $line, $alc_data,
+                    $received_order, $actual_ordernumber, $edi_ordernumber
+                );
+                $adjustments_created += $created;
+                if ( defined $charge_excl ) {
+                    $total_charge_excl += $charge_excl;
+                    $total_charge_tax  += $charge_tax;
+                    $has_charges = 1;
+                }
+            }
+
+            # Single orderline price adjustment for all accumulated charges on this line.
+            # Calling _adjust_orderline_for_service_charge once per charge would cause each
+            # call to subtract only its own amount from the full EDI base price (MOA+128),
+            # leaving the last charge's result as the final unit price instead of subtracting all.
+            if ( !$self->{dry_run} && $has_charges ) {
+                if ($received_order) {
+                    $self->_adjust_orderline_for_service_charge(
+                        $received_order, $total_charge_excl, $total_charge_tax,
+                        $edi_ordernumber, $line
+                    );
+                } else {
+                    $self->{_logger}->warn(
+                        'EDI Service Charges: Cannot adjust orderline for service charge - no received order found for line '
+                        . $line->line_item_number . " (original order $edi_ordernumber)"
+                    );
+                }
+            } elsif ( $self->{dry_run} && $has_charges ) {
+                my $order_info = $actual_ordernumber || $edi_ordernumber || 'Unknown';
+                if ( $actual_ordernumber && $actual_ordernumber != $edi_ordernumber ) {
+                    $order_info .= " (split from #$edi_ordernumber)";
+                }
+                $self->_msg(
+                    "  Would adjust orderline $order_info to correct price based on EDI PRI data"
+                    . " (total charge excl tax: $total_charge_excl, total charge tax: $total_charge_tax)",
+                    1
                 );
             }
         }
@@ -330,7 +377,8 @@ sub _handle_invoice_level_alc {
 }
 
 sub _handle_line_level_alc {
-    my ( $self, $invoice_message, $koha_invoice, $line, $alc_data, $orders_processed ) = @_;
+    my ( $self, $invoice_message, $koha_invoice, $line, $alc_data,
+         $received_order, $actual_ordernumber, $edi_ordernumber ) = @_;
 
     my $type         = $alc_data->{type};
     my $amount       = $alc_data->{amount};
@@ -346,7 +394,7 @@ sub _handle_line_level_alc {
             . $line->line_item_number . ' in invoice ' . $koha_invoice->invoicenumber
             . ": amount=$amount, service_code=$service_code"
         );
-        return 0;
+        return ( 0, undef, undef );
     }
 
     my $reason              = 'EDI_CHARGE';
@@ -367,7 +415,7 @@ sub _handle_line_level_alc {
             . ": amount=$amount, service_code=$service_code (existing ID "
             . $existing_adjustment->adjustment_id . ')'
         );
-        return 0;
+        return ( 0, undef, undef );
     }
 
     my $vendor_name = $self->_get_vendor_name_from_message($invoice_message);
@@ -383,12 +431,8 @@ sub _handle_line_level_alc {
             . $line->line_item_number . ' in invoice ' . $koha_invoice->invoicenumber
             . ": service_code=$service_code"
         );
-        return 0;
+        return ( 0, undef, undef );
     }
-
-    my $edi_ordernumber = $line->ordernumber();
-    my $received_order  = $self->_find_received_order_for_invoice( $edi_ordernumber, $koha_invoice, $orders_processed );
-    my $actual_ordernumber = $received_order ? $received_order->ordernumber : undef;
 
     my $order_info = $actual_ordernumber || $edi_ordernumber || 'Unknown';
     if ( $actual_ordernumber && $actual_ordernumber != $edi_ordernumber ) {
@@ -437,17 +481,6 @@ sub _handle_line_level_alc {
             . "), budget_id=$budget_id, service_code=$service_code, order="
             . ( $actual_ordernumber || $edi_ordernumber || 'unknown' )
         );
-
-        if ( $type eq 'charge' && $received_order ) {
-            $self->_adjust_orderline_for_service_charge(
-                $received_order, $amount, $alc_data->{tax_amount}, $edi_ordernumber, $line
-            );
-        } elsif ( $type eq 'charge' && !$received_order ) {
-            $self->{_logger}->warn(
-                'EDI Service Charges: Cannot adjust orderline for service charge - no received order found for line '
-                . $line->line_item_number . " (original order $edi_ordernumber)"
-            );
-        }
     } else {
         $self->_msg(
             "  Would create $type adjustment for invoice " . $koha_invoice->invoiceid
@@ -460,11 +493,11 @@ sub _handle_line_level_alc {
             . ": adjustment=$adjustment_amount (charge=$amount, tax=" . $alc_data->{tax_amount}
             . "), budget_id=$budget_id, service_code=$service_code, order=$order_info"
         );
-        $self->_msg("  Would adjust orderline $order_info to correct price based on EDI PRI data")
-            if $type eq 'charge' && $received_order;
     }
 
-    return 1;
+    # Return charge amounts so the caller can accumulate totals for a single
+    # orderline price adjustment across all charges on this line.
+    return ( 1, $type eq 'charge' ? $amount : undef, $type eq 'charge' ? ( $alc_data->{tax_amount} || 0 ) : undef );
 }
 
 sub _get_message_allowances_charges {
