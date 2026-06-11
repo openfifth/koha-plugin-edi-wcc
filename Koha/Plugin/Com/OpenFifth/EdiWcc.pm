@@ -10,13 +10,13 @@ use Koha::Logger;
 use Koha::Token;
 use JSON qw( decode_json encode_json );
 
-our $VERSION = '0.1.5';
+our $VERSION = '0.1.6';
 
 our $metadata = {
     name            => 'EDI Service Charges (WCC)',
     author          => 'Open Fifth',
     date_authored   => '2026-05-01',
-    date_updated    => '2026-06-09',
+    date_updated    => '2026-06-11',
     minimum_version => '24.11.00.000',
     maximum_version => undef,
     version         => $VERSION,
