@@ -99,3 +99,7 @@ commits squashed into this plugin:
 - Allowance-sign / split-order / multi-message fixes
 - Tax handling (TAX segment, `tax_value_on_receiving` recalculation)
 - £0 adjustment guard, missing-order handling, LSL field copy fixes
+
+## Licence
+
+This plugin is licensed under the GNU Affero General Public License v3.0 or later (`AGPL-3.0-or-later`). See [LICENSE](LICENSE).
