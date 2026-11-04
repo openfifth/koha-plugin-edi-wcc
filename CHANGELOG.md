@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Relicensed under AGPL-3.0-or-later: added `LICENSE`, SPDX header, and `license`/`license_url` plugin metadata.
+
 ## 0.1.0 — 2026-05-01
 
 Initial extraction from the `24.11.wcc` Koha fork.
