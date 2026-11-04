@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Adopt the plugin template's CI and release tooling: `npm run release:*` scripts and preflight, `DEVELOPMENT.md`, a `t/00-load.t` smoke test and the GitHub Actions workflow (already current/customised, left as is).
+
 - Relicensed under AGPL-3.0-or-later: added `LICENSE`, SPDX header, and `license`/`license_url` plugin metadata.
 
 ## 0.1.0 — 2026-05-01
@@ -20,3 +22,5 @@ Initial extraction from the `24.11.wcc` Koha fork.
   is not idempotent and a second cron path would double-count
   adjustments.
 - Configure page exposes `dry_run` and `verbose` defaults.
+
+[Unreleased]: https://github.com/openfifth/koha-plugin-edi-wcc/compare/v0.1.6...HEAD

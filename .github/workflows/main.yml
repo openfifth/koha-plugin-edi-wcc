@@ -10,7 +10,41 @@ on:
     - cron: "0 6 1,15 * *"
 
 jobs:
+  guard:
+    name: Skip duplicate release run
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - name: Checkout plugin code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Detect release-tag companion push
+        id: check
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF: ${{ github.ref }}
+        run: |
+          # `npm run release:*` pushes the version-bump commit on main and its
+          # release tag together (`--follow-tags`). GitHub fires a separate
+          # push event per ref updated, so without this guard the same commit
+          # gets the full test matrix twice: once for the branch push, once
+          # for the tag push. Skip the branch-push copy when this exact
+          # commit already carries a release tag; the tag-triggered run (a
+          # separate event, with github.ref pointing at the tag) still runs
+          # unaffected.
+          if [ "$EVENT_NAME" = "push" ] && [[ "$EVENT_REF" == refs/heads/* ]] && git tag --points-at HEAD | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Commit already covered by a tag-triggered run; skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
   unit_tests:
+    needs: guard
+    if: needs.guard.outputs.skip != 'true'
     name: Run unit tests
     runs-on: ubuntu-latest
 
