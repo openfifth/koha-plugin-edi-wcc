@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Rebuild the CI workflow on the template's KTD setup (still testing against the o5th Koha fork): the old workflow downloaded `docker-compose.yml` from a koha-testing-docker GitLab URL that now returns 404, failing the 0.1.7 release run.
+
 ## [0.1.7] - 2026-11-05
 
 ### Changed
