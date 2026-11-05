@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-11-05
+
 ### Fixed
 
 - Rebuild the CI workflow on the template's KTD setup (still testing against the o5th Koha fork): the old workflow downloaded `docker-compose.yml` from a koha-testing-docker GitLab URL that now returns 404, failing the 0.1.7 release run.
@@ -29,5 +31,6 @@ Initial extraction from the `24.11.wcc` Koha fork.
   adjustments.
 - Configure page exposes `dry_run` and `verbose` defaults.
 
-[Unreleased]: https://github.com/openfifth/koha-plugin-edi-wcc/compare/v0.1.7...HEAD
+[Unreleased]: https://github.com/openfifth/koha-plugin-edi-wcc/compare/v0.1.8...HEAD
+[0.1.8]: https://github.com/openfifth/koha-plugin-edi-wcc/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/openfifth/koha-plugin-edi-wcc/compare/v0.1.6...v0.1.7
