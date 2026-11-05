@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-11-05
+
 ### Changed
 
 - Adopt the plugin template's CI and release tooling: `npm run release:*` scripts and preflight, `DEVELOPMENT.md`, a `t/00-load.t` smoke test and the GitHub Actions workflow (already current/customised, left as is).
@@ -23,4 +25,5 @@ Initial extraction from the `24.11.wcc` Koha fork.
   adjustments.
 - Configure page exposes `dry_run` and `verbose` defaults.
 
-[Unreleased]: https://github.com/openfifth/koha-plugin-edi-wcc/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/openfifth/koha-plugin-edi-wcc/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/openfifth/koha-plugin-edi-wcc/compare/v0.1.6...v0.1.7
