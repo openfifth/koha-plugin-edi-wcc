@@ -6,8 +6,8 @@
     "module": "Koha::Plugin::Com::OpenFifth::EdiWcc",
     "pm_path": "Koha/Plugin/Com/OpenFifth/EdiWcc.pm"
   },
-  "version": "0.1.8",
-  "previous_version": "0.1.7",
+  "version": "0.1.9",
+  "previous_version": "0.1.8",
   "scripts": {
     "version:patch": "node increment_version.js patch | cat",
     "version:minor": "node increment_version.js minor | cat",

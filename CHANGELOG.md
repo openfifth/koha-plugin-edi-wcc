@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-11-05
+
 ## [0.1.8] - 2026-11-05
 
 ### Fixed
@@ -31,6 +33,7 @@ Initial extraction from the `24.11.wcc` Koha fork.
   adjustments.
 - Configure page exposes `dry_run` and `verbose` defaults.
 
-[Unreleased]: https://github.com/openfifth/koha-plugin-edi-wcc/compare/v0.1.8...HEAD
+[Unreleased]: https://github.com/openfifth/koha-plugin-edi-wcc/compare/v0.1.9...HEAD
+[0.1.9]: https://github.com/openfifth/koha-plugin-edi-wcc/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/openfifth/koha-plugin-edi-wcc/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/openfifth/koha-plugin-edi-wcc/compare/v0.1.6...v0.1.7
